@@ -1,9 +1,12 @@
 [tool.poetry]
-name = "cachepot"
+name = "fastapi-cachepot"
 version = "0.0.1"
-description = ""
-authors = ["Alexey Kotenko <alexey+github@kotenko.me>"]
+description = "The FastAPI cache the way it should be."
+authors = ["Aleksei Kotenko <alexey+github@kotenko.me>"]
 readme = "README.md"
+packages = [
+    { include = "cachepot" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
