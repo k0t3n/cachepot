@@ -1,9 +1,11 @@
-from cachepot.storages.abstract import AbstractStorage
 from redis.asyncio.client import Redis
+
+from cachepot.storages.abstract import AbstractStorage
 
 
 class RedisStorage(AbstractStorage):
     def __init__(self, redis: Redis):
+        assert isinstance(redis, Redis), 'Invalid Redis client passed'
         self.redis = redis
 
     async def get(self, key: str) -> bytes | None:
