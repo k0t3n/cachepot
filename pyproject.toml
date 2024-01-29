@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "cachepot"
+version = "0.0.1"
+description = ""
+authors = ["Alexey Kotenko <alexey+github@kotenko.me>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "<1.0.0"
+pydantic = "^2.0"
+redis = { version = "^4.0.0", optional = true }
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
