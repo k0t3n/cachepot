@@ -14,22 +14,12 @@ pip install fastapi-cachepot
 
 ```python
 import redis.asyncio as redis
-from fastapi import FastAPI, Depends
 
+from cachepot.app import CachedFastAPI
 from cachepot.constants import CachePolicy
-from cachepot.routing import CachedAPIRouter
-from cachepot.storages.redis import RedisStorage
+from cachepot.storages import RedisStorage
 
-app = FastAPI()
-
-app.router = CachedAPIRouter(
-    dependency_overrides_provider=app,
-    # define dependencies inside overridden router only
-    dependencies=(Depends(...),),
-)
-
-# hack to finish setting up custom router
-app.setup()
+app = CachedFastAPI()
 
 client = redis.from_url('redis://127.0.0.1:6379')
 storage = RedisStorage(client)
@@ -41,12 +31,9 @@ cache_policy = CachePolicy(
 )
 
 
-# Do not use @app.route() due to incapability
-@app.router.get(path='', cache_policy=cache_policy)
+@app.get(path='', cache_policy=cache_policy)
 async def cached_hello_world():
     return {'result': 'hello, world!'}
-
-
 
 ```
 

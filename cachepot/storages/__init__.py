@@ -1,8 +1,8 @@
 __all__ = []
 
 try:
-    from cachepot.storages import redis
+    from cachepot.storages.redis import RedisStorage
 except ImportError:
     pass
 else:
-    __all__ += ['redis']
+    __all__ += ['RedisStorage']

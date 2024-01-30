@@ -14,6 +14,7 @@ class RedisStorage(AbstractStorage):
         return await self.redis.get(key)
 
     async def set(self, key: str, value: bytes, expire: Optional[int] = None):
+        await self.redis.set(key, value, ex=expire)
 
     async def delete(self, key: str):
         return await self.redis.delete(key)
