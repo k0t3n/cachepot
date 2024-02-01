@@ -17,4 +17,25 @@ jobs:
         run: poetry install --no-root --with=test
       - name: Check types
         run: poetry run mypy cachepot
+  pytest:
+    strategy:
+      matrix:
+        python: [ '3.9', '3.10', '3.11', '3.12' ]
+      fail-fast: false
+    name: 'Pytest python ${{ matrix.python }}'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Setup Python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: poetry
+      - name: Install dependencies
+        run: poetry install --no-root --with=test
+      - name: Run tests
+        run: poetry run pytest
 
