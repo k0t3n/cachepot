@@ -6,15 +6,19 @@ from cachepot.storages.abstract import AbstractStorage
 
 
 class RedisStorage(AbstractStorage):
-    def __init__(self, redis: Redis):
+    def __init__(self, redis: Redis[bytes]):
         assert isinstance(redis, Redis), 'Invalid Redis client passed'
-        self.redis = redis
+        self.redis: Redis[bytes] = redis
 
     async def get(self, key: str) -> Optional[bytes]:
-        return await self.redis.get(key)
+        data = await self.redis.get(key)
+        if data and not isinstance(data, bytes):
+            return bytes(data)
+        return None
 
-    async def set(self, key: str, value: bytes, expire: Optional[int] = None):
+    async def set(self, key: str, value: bytes, expire: Optional[int] = None) -> bool:
         await self.redis.set(key, value, ex=expire)
+        return True
 
-    async def delete(self, key: str):
-        return await self.redis.delete(key)
+    async def delete(self, key: str) -> bool:
+        return bool(await self.redis.delete(key))

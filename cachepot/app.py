@@ -1,9 +1,10 @@
-from typing import Optional, List, Sequence, Callable, Any, Type, Dict, Union
+from typing import Optional, List, Sequence, Callable, Any, Type, Dict, Union, TypeVar
 
-from fastapi import FastAPI, Depends, routing
-from fastapi.applications import AppType
+from fastapi import FastAPI, routing
 from fastapi.datastructures import Default
+from fastapi.params import Depends
 from fastapi.responses import Response
+from fastapi.types import DecoratedCallable
 from fastapi.utils import generate_unique_id
 from starlette.responses import JSONResponse
 from starlette.routing import BaseRoute
@@ -11,6 +12,8 @@ from starlette.types import Lifespan
 
 from cachepot.constants import CachePolicy
 from cachepot.routing import CachedAPIRouter
+
+AppType = TypeVar("AppType", bound="CachedFastAPI")
 
 
 class CachedFastAPI(FastAPI):
@@ -20,11 +23,11 @@ class CachedFastAPI(FastAPI):
     """
 
     def __init__(
-        self,
-        *args,
+        self: AppType,
+        *args: Any,
         routes: Optional[List[BaseRoute]] = None,
         redirect_slashes: bool = True,
-        router_class=CachedAPIRouter,
+        router_class: Type[routing.APIRouter] = CachedAPIRouter,
         on_startup: Optional[Sequence[Callable[[], Any]]] = None,
         on_shutdown: Optional[Sequence[Callable[[], Any]]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
@@ -37,7 +40,7 @@ class CachedFastAPI(FastAPI):
         generate_unique_id_function: Callable[[routing.APIRoute], str] = Default(
             generate_unique_id
         ),
-        **kwargs
+        **kwargs: Any
     ):
         super().__init__(
             *args,
@@ -73,8 +76,15 @@ class CachedFastAPI(FastAPI):
         )
         self.setup()
 
-    def get(self, *args, cache_policy: Optional[CachePolicy] = None, **kwargs):
-        return self.router.get(*args, cache_policy=cache_policy, **kwargs)
+    def get(
+        self,
+        *args: Any,
+        cache_policy: Optional[CachePolicy] = None,
+        **kwargs: Any
+    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        if isinstance(self.router, CachedAPIRouter):
+            return self.router.get(*args, cache_policy=cache_policy, **kwargs)
+        return self.router.get(*args, **kwargs)
 
 
 __all__ = ('CachedFastAPI',)

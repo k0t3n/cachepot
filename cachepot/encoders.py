@@ -1,16 +1,15 @@
-from typing import Optional, Dict
-
 from fastapi import Response
 from pydantic import BaseModel
+from starlette.datastructures import MutableHeaders
 
 
 class ResponseEncoder(BaseModel):
     body: bytes
     status_code: int
-    headers: Optional[Dict[str, str]]
+    headers: MutableHeaders
 
     @classmethod
-    def encode(cls, response: Response):
+    def encode(cls, response: Response) -> 'ResponseEncoder':
         return ResponseEncoder(
             body=response.body,
             status_code=response.status_code,

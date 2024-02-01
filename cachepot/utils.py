@@ -2,7 +2,7 @@ import asyncio
 import email
 import json
 from contextlib import AsyncExitStack
-from typing import Optional, Union, Type, Any, Callable, Coroutine, Dict
+from typing import Optional, Union, Type, Any, Callable, Coroutine, Dict, cast
 
 from fastapi import params
 from fastapi._compat import ModelField, Undefined, _normalize_errors
@@ -21,20 +21,50 @@ from cachepot.constants import CachePolicy
 from cachepot.encoders import ResponseEncoder
 
 
+def is_cachable(request: Request, cache_policy: Optional[CachePolicy]) -> bool:
+    return bool(request.method == 'GET' and cache_policy and cache_policy.is_active)
+
+
+async def get_cached_response(request: Request, cache_policy: Optional[CachePolicy]) -> Optional[Response]:
+    if is_cachable(request, cache_policy):
+        policy = cast(CachePolicy, cache_policy)
+        if not policy.respect_no_cache or request.headers.get('cache-control') != 'no-cache':
+            key = policy.get_key(request=request)
+            if data := await policy.storage.get(key):
+                response = ResponseEncoder.model_validate_json(data)
+                if policy.cached_response_header:
+                    response.headers.update({policy.cached_response_header: 'true'})
+
+                return response.decode()
+    return None
+
+
+async def cache_response(request: Request, response: Response, cache_policy: Optional[CachePolicy]) -> Response:
+    if is_cachable(request, cache_policy):
+        policy = cast(CachePolicy, cache_policy)
+        response_data = ResponseEncoder.encode(response=response).model_dump_json().encode()
+        await policy.storage.set(key=policy.get_key(request), value=response_data, expire=policy.ttl)
+
+        if policy.cached_response_header:
+            response.headers.update({policy.cached_response_header: 'false'})
+
+    return response
+
+
 def get_request_handler(
-        dependant: Dependant,
-        body_field: Optional[ModelField] = None,
-        status_code: Optional[int] = None,
-        response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
-        response_field: Optional[ModelField] = None,
-        response_model_include: Optional[IncEx] = None,
-        response_model_exclude: Optional[IncEx] = None,
-        response_model_by_alias: bool = True,
-        response_model_exclude_unset: bool = False,
-        response_model_exclude_defaults: bool = False,
-        response_model_exclude_none: bool = False,
-        dependency_overrides_provider: Optional[Any] = None,
-        cache_policy: Optional[CachePolicy] = None,
+    dependant: Dependant,
+    body_field: Optional[ModelField] = None,
+    status_code: Optional[int] = None,
+    response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
+    response_field: Optional[ModelField] = None,
+    response_model_include: Optional[IncEx] = None,
+    response_model_exclude: Optional[IncEx] = None,
+    response_model_by_alias: bool = True,
+    response_model_exclude_unset: bool = False,
+    response_model_exclude_defaults: bool = False,
+    response_model_exclude_none: bool = False,
+    dependency_overrides_provider: Optional[Any] = None,
+    cache_policy: Optional[CachePolicy] = None,
 ) -> Callable[[Request], Coroutine[Any, Any, Response]]:
     assert dependant.call is not None, 'dependant.call must be a function'
     is_coroutine = asyncio.iscoroutinefunction(dependant.call)
@@ -100,16 +130,8 @@ def get_request_handler(
         if errors:
             raise RequestValidationError(_normalize_errors(errors), body=body)
 
-        is_cachable = bool(request.method == 'GET' and cache_policy and cache_policy.is_active)
-        if is_cachable:
-            if not cache_policy.respect_no_cache or request.headers.get('cache-control') != 'no-cache':
-                key = cache_policy.get_key(request=request)
-                if data := await cache_policy.storage.get(key):
-                    response = ResponseEncoder.model_validate_json(data)
-                    if cache_policy.cached_response_header:
-                        response.headers.update({cache_policy.cached_response_header: 'true'})
-
-                    return response.decode()
+        if response := await get_cached_response(request, cache_policy):
+            return response
 
         # route runtime
         raw_response = await run_endpoint_function(
@@ -145,11 +167,7 @@ def get_request_handler(
         if not is_body_allowed_for_status_code(response.status_code):
             response.body = b''
         response.headers.raw.extend(sub_response.headers.raw)
-        if is_cachable:
-            data = ResponseEncoder.encode(response=response)
-            await cache_policy.storage.set(key=cache_policy.key, value=data.json(), expire=cache_policy.ttl)
-        if cache_policy and cache_policy.is_active and cache_policy.cached_response_header:
-            response.headers.update({cache_policy.cached_response_header: 'false'})
-        return response
+
+        return await cache_response(request, response, cache_policy)
 
     return app

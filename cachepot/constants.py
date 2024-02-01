@@ -16,4 +16,4 @@ class CachePolicy:
     cached_response_header: str = 'X-Cache-Hit'
 
     def get_key(self, request: Request) -> str:
-        return self.key if isinstance(self.key, str) else self.key(request=request)
+        return self.key if isinstance(self.key, str) else self.key(request)
