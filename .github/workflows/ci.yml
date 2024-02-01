@@ -1,0 +1,20 @@
+name: CI
+on: [ push ]
+jobs:
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Setup Python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: poetry
+      - name: Install dependencies
+        run: poetry install --no-root
+      - name: Check types
+        run: mypy cachepot
+
