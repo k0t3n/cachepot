@@ -22,27 +22,31 @@ from cachepot.encoders import ResponseEncoder
 
 
 def is_cachable(request: Request, cache_policy: Optional[CachePolicy]) -> bool:
-    return bool(request.method == 'GET' and cache_policy and cache_policy.is_active)
+    return bool(
+        request.method == 'GET'
+        and cache_policy
+        and cache_policy.is_active
+        and (not cache_policy.respect_no_cache or request.headers.get('cache-control') != 'no-cache')
+    )
 
 
 async def get_cached_response(request: Request, cache_policy: Optional[CachePolicy]) -> Optional[Response]:
     if is_cachable(request, cache_policy):
         policy = cast(CachePolicy, cache_policy)
-        if not policy.respect_no_cache or request.headers.get('cache-control') != 'no-cache':
-            key = policy.get_key(request=request)
-            if data := await policy.storage.get(key):
-                response = ResponseEncoder.model_validate_json(data)
-                if policy.cached_response_header:
-                    response.headers.update({policy.cached_response_header: 'true'})
+        key = policy.get_key(request=request)
+        if data := await policy.storage.get(key):
+            response = ResponseEncoder.model_validate_json(data)
+            if policy.cached_response_header:
+                response.headers.update({policy.cached_response_header: 'true'})
 
-                return response.decode()
+            return response.decode()
     return None
 
 
 async def cache_response(request: Request, response: Response, cache_policy: Optional[CachePolicy]) -> Response:
     if is_cachable(request, cache_policy):
         policy = cast(CachePolicy, cache_policy)
-        response_data = ResponseEncoder.encode(response=response).model_dump_json().encode()
+        response_data = ResponseEncoder.encode(response=response).cache_data()
         await policy.storage.set(key=policy.get_key(request), value=response_data, expire=policy.ttl)
 
         if policy.cached_response_header:
