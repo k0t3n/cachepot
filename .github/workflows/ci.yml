@@ -16,5 +16,5 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-root --with=test
       - name: Check types
-        run: mypy cachepot
+        run: poetry run mypy cachepot
 
