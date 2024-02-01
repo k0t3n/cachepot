@@ -14,7 +14,7 @@ jobs:
           python-version: '3.12'
           cache: poetry
       - name: Install dependencies
-        run: poetry install --no-root --with=dev
+        run: poetry install --no-root --with=test
       - name: Check types
         run: mypy cachepot
 
