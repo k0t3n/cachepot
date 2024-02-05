@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fastapi-cachepot"
-version = "0.0.4"
+version = "0.1.0"
 description = "The FastAPI cache the way it should be."
 authors = ["Aleksei Kotenko <alexey+github@kotenko.me>"]
 readme = "README.md"
