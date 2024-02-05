@@ -10,7 +10,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.9"
-fastapi = "<1.0.0"
+fastapi = ">= 0.106.0"
 pydantic = "^2.0"
 redis = { version = "^4.0.0", optional = true }
 
